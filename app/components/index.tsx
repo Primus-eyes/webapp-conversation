@@ -354,7 +354,7 @@ const Main: FC<IMainProps> = () => {
     // 添加用户角色到inputs
     const roleInputs = {
       ...data.inputs,
-      role: userInfo?.role ?? 1, // 默认为患者角色
+      role: userInfo?.role.toString() ?? '1', // 将数字转换为字符串
     }
 
     // question
