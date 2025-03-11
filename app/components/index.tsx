@@ -744,18 +744,26 @@ const Main: FC<IMainProps> = () => {
             ></ConfigSence>
           )}
 
+          {/* 当自动开始会话时，添加一个占位的头部间距 */}
+          {(isNewConversation && userInfo && isChatStarted && !hasSetInputs) && (
+            <div className="h-16 md:h-24"></div>
+          )}
+
           {
             (hasSetInputs || isChatStarted || (isNewConversation && userInfo)) && (
               <div className='relative grow h-[200px] pc:w-[794px] max-w-full mobile:w-full pb-[66px] mx-auto mb-3.5 overflow-hidden'>
                 <div className='h-full overflow-y-auto' ref={chatListDomRef}>
-                  <Chat
-                    chatList={chatList}
-                    onSend={handleSend}
-                    onFeedback={handleFeedback}
-                    isResponding={isResponding}
-                    checkCanSend={checkCanSend}
-                    visionConfig={visionConfig}
-                  />
+                  {/* 添加顶部间距，防止第一个聊天气泡重叠 */}
+                  <div className={`${(!hasSetInputs && isChatStarted) || (isNewConversation && userInfo) ? 'pt-8 md:pt-12' : ''}`}>
+                    <Chat
+                      chatList={chatList}
+                      onSend={handleSend}
+                      onFeedback={handleFeedback}
+                      isResponding={isResponding}
+                      checkCanSend={checkCanSend}
+                      visionConfig={visionConfig}
+                    />
+                  </div>
                 </div>
               </div>)
           }
