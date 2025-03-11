@@ -120,7 +120,9 @@ const Chat: FC<IChatProps> = ({
   return (
     <div className={cn(!feedbackDisabled && 'px-3.5', 'h-full')}>
       {/* Chat List */}
-      <div className="h-full space-y-[30px]">
+      <div className="h-full space-y-[30px] pb-4">
+        {/* 添加额外的顶部间距，确保第一个气泡不会顶到最上面 */}
+        {chatList.length > 0 && <div className="h-4"></div>}
         {chatList.map((item) => {
           if (item.isAnswer) {
             const isLast = item.id === chatList[chatList.length - 1].id
