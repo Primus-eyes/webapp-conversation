@@ -22,6 +22,7 @@ import AppUnavailable from '@/app/components/app-unavailable'
 import { API_KEY, APP_ID, APP_INFO, isShowPrompt, promptTemplate } from '@/config'
 import type { Annotation as AnnotationType } from '@/types/log'
 import { addFileInfos, sortAgentSorts } from '@/utils/tools'
+import { useUser } from '@/app/context/user-context'
 
 export type IMainProps = {
   params: any
@@ -32,6 +33,7 @@ const Main: FC<IMainProps> = () => {
   const media = useBreakpoints()
   const isMobile = media === MediaType.mobile
   const hasSetAppConfig = APP_ID && API_KEY
+  const { userInfo } = useUser()
 
   /*
   * app info
@@ -349,6 +351,12 @@ const Main: FC<IMainProps> = () => {
       })
     }
 
+    // 添加用户角色到inputs
+    const roleInputs = {
+      ...data.inputs,
+      role: userInfo?.role ?? 1, // 默认为患者角色
+    }
+
     // question
     const questionId = `question-${Date.now()}`
     const questionItem = {
@@ -384,7 +392,13 @@ const Main: FC<IMainProps> = () => {
     let tempNewConversationId = ''
 
     setRespondingTrue()
-    sendChatMessage(data, {
+    await sendChatMessage({
+      conversation_id: isNewConversation ? null : currConversationId,
+      inputs: roleInputs,
+      query: message,
+      files: files,
+      user: userInfo?.username || 'default_user',
+    }, {
       getAbortController: (abortController) => {
         setAbortController(abortController)
       },
