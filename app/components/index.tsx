@@ -158,10 +158,66 @@ const Main: FC<IMainProps> = () => {
   }
   useEffect(handleConversationSwitch, [currConversationId, inited])
 
+  // 自动开始会话的函数
+  const autoStartChat = () => {
+    if (!userInfo || !promptConfig || !promptConfig.prompt_variables.length)
+      return
+
+    // 创建一个包含所有必要变量的输入对象
+    const inputs: Record<string, any> = {}
+
+    // 遍历所有变量，为每个变量设置值
+    promptConfig.prompt_variables.forEach(variable => {
+      // 如果变量名是 role，则使用 userInfo.role
+      if (variable.key === 'role' && userInfo?.role) {
+        inputs[variable.key] = userInfo.role
+      } else if (variable.required) {
+        // 对于其他必填变量，设置一个默认值或空字符串
+        // 这里可以根据变量类型设置不同的默认值
+        switch (variable.type) {
+          case 'select':
+            // 如果是选择类型，使用第一个选项作为默认值
+            inputs[variable.key] = variable.options && variable.options.length > 0
+              ? variable.options[0]
+              : ''
+            break
+          case 'number':
+            inputs[variable.key] = 0
+            break
+          default:
+            inputs[variable.key] = ''
+        }
+      } else {
+        // 对于非必填变量，可以设置为空
+        inputs[variable.key] = ''
+      }
+    })
+
+    // 自动开始会话
+    handleStartChat(inputs)
+
+    // 记录日志，方便调试
+    console.log('自动开始会话，使用的输入变量：', inputs)
+  }
+
+  // 在获取到 promptConfig 后自动开始会话
+  useEffect(() => {
+    if (promptConfig && isNewConversation && !isChatStarted && userInfo) {
+      // 使用 setTimeout 确保状态已更新
+      setTimeout(() => autoStartChat(), 0)
+    }
+  }, [promptConfig, isNewConversation, userInfo, isChatStarted])
+
   const handleConversationIdChange = (id: string) => {
     if (id === '-1') {
       createNewChat()
       setConversationIdChangeBecauseOfNew(true)
+
+      // 当创建新会话时，如果已经有 userInfo 和 promptConfig，则自动开始会话
+      if (userInfo && promptConfig) {
+        // 使用 setTimeout 确保状态已更新
+        setTimeout(() => autoStartChat(), 100)
+      }
     }
     else {
       setConversationIdChangeBecauseOfNew(false)
@@ -258,6 +314,24 @@ const Main: FC<IMainProps> = () => {
 
         if (isNotNewConversation)
           setCurrConversationId(_conversationId, APP_ID, false)
+        else if (userInfo) {
+          // 如果是新会话且有用户信息，创建新会话并自动开始
+          createNewChat()
+          // 延迟执行以确保状态已更新
+          setTimeout(() => {
+            if (prompt_variables.length > 0) {
+              const inputs: Record<string, any> = {}
+              prompt_variables.forEach(variable => {
+                if (variable.key === 'role' && userInfo.role) {
+                  inputs[variable.key] = userInfo.role
+                } else {
+                  inputs[variable.key] = ''
+                }
+              })
+              handleStartChat(inputs)
+            }
+          }, 0)
+        }
 
         setInited(true)
       }
@@ -655,20 +729,23 @@ const Main: FC<IMainProps> = () => {
         )}
         {/* main */}
         <div className='flex-grow flex flex-col h-[calc(100vh_-_3rem)] overflow-y-auto'>
-          <ConfigSence
-            conversationName={conversationName}
-            hasSetInputs={hasSetInputs}
-            isPublicVersion={isShowPrompt}
-            siteInfo={APP_INFO}
-            promptConfig={promptConfig}
-            onStartChat={handleStartChat}
-            canEditInputs={canEditInputs}
-            savedInputs={currInputs as Record<string, any>}
-            onInputsChange={setCurrInputs}
-          ></ConfigSence>
+          {/* 只有在没有自动开始会话时才显示 ConfigSence */}
+          {(!hasSetInputs && !isChatStarted && !(isNewConversation && userInfo)) && (
+            <ConfigSence
+              conversationName={conversationName}
+              hasSetInputs={hasSetInputs}
+              isPublicVersion={isShowPrompt}
+              siteInfo={APP_INFO}
+              promptConfig={promptConfig}
+              onStartChat={handleStartChat}
+              canEditInputs={canEditInputs}
+              savedInputs={currInputs as Record<string, any>}
+              onInputsChange={setCurrInputs}
+            ></ConfigSence>
+          )}
 
           {
-            hasSetInputs && (
+            (hasSetInputs || isChatStarted || (isNewConversation && userInfo)) && (
               <div className='relative grow h-[200px] pc:w-[794px] max-w-full mobile:w-full pb-[66px] mx-auto mb-3.5 overflow-hidden'>
                 <div className='h-full overflow-y-auto' ref={chatListDomRef}>
                   <Chat
